@@ -1,0 +1,95 @@
+# Build Android TV client (Debug by default, optional Release with signing)
+
+name: android-tv
+
+on:
+  push:
+    paths:
+      - 'android-tv/**'
+      - '.github/workflows/android-tv.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install \
+            'platform-tools' \
+            'platforms;android-34' \
+            'build-tools;34.0.0'
+          yes | sdkmanager --licenses
+
+      - name: Gradle Build (Debug)
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.7
+          build-root-directory: android-tv
+          arguments: :app:assembleDebug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tv-debug-apk
+          path: android-tv/app/build/outputs/apk/debug/*.apk
+
+  release:
+    runs-on: ubuntu-latest
+    if: ${{ secrets.TV_STORE_FILE && secrets.TV_STORE_PASSWORD && secrets.TV_KEY_ALIAS && secrets.TV_KEY_PASSWORD }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install \
+            'platform-tools' \
+            'platforms;android-34' \
+            'build-tools;34.0.0'
+          yes | sdkmanager --licenses
+
+      - name: Prepare Keystore
+        env:
+          TV_STORE_FILE: ${{ secrets.TV_STORE_FILE }}
+        run: |
+          echo "$TV_STORE_FILE" | base64 -d > android-tv/tv-release.keystore
+
+      - name: Gradle Build (Release)
+        uses: gradle/gradle-build-action@v3
+        with:
+          gradle-version: 8.7
+          build-root-directory: android-tv
+          arguments: >-
+            -PTV_STORE_FILE=tv-release.keystore
+            -PTV_STORE_PASSWORD=${{ secrets.TV_STORE_PASSWORD }}
+            -PTV_KEY_ALIAS=${{ secrets.TV_KEY_ALIAS }}
+            -PTV_KEY_PASSWORD=${{ secrets.TV_KEY_PASSWORD }}
+            :app:assembleRelease
+
+      - name: Upload Release APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-tv-release-apk
+          path: android-tv/app/build/outputs/apk/release/*.apk

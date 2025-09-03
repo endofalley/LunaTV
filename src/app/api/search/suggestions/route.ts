@@ -3,7 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { AdminConfig } from '@/lib/admin.types';
-import { getAuthInfoFromCookie } from '@/lib/auth';
+import { getAuthInfoFromRequest } from '@/lib/authx';
 import { getAvailableApiSites, getConfig } from '@/lib/config';
 import { searchFromApi } from '@/lib/downstream';
 import { yellowWords } from '@/lib/yellow';
@@ -13,7 +13,7 @@ export const runtime = 'nodejs';
 export async function GET(request: NextRequest) {
   try {
     // 从 cookie 获取用户信息
-    const authInfo = getAuthInfoFromCookie(request);
+    const authInfo = await getAuthInfoFromRequest(request);
     if (!authInfo || !authInfo.username) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

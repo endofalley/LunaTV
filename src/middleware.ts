@@ -3,26 +3,56 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 import { getAuthInfoFromCookie } from '@/lib/auth';
+import { verifyToken } from '@/lib/token';
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
+  const isApi = pathname.startsWith('/api');
+
+  // CORS 预检处理（仅 API）
+  if (isApi && request.method === 'OPTIONS') {
+    const res = new NextResponse(null, { status: 204 });
+    applyCorsHeaders(res);
+    return res;
+  }
 
   // 跳过不需要认证的路径
   if (shouldSkipAuth(pathname)) {
-    return NextResponse.next();
+    const res = NextResponse.next();
+    if (isApi) applyCorsHeaders(res);
+    return res;
   }
 
   const storageType = process.env.NEXT_PUBLIC_STORAGE_TYPE || 'localstorage';
 
   if (!process.env.PASSWORD) {
-    // 如果没有设置密码，重定向到警告页面
+    // 如果没有设置密码，页面重定向到警告；API 返回 401
+    if (isApi) {
+      const res = new NextResponse('Unauthorized', { status: 401 });
+      applyCorsHeaders(res);
+      return res;
+    }
     const warningUrl = new URL('/warning', request.url);
     return NextResponse.redirect(warningUrl);
   }
 
-  // 从cookie获取认证信息
-  const authInfo = getAuthInfoFromCookie(request);
+  // API: Bearer Token 优先
+  if (isApi) {
+    const authz = request.headers.get('authorization');
+    const secret = process.env.PASSWORD || '';
+    if (authz && authz.toLowerCase().startsWith('bearer ')) {
+      const token = authz.slice(7).trim();
+      const payload = await verifyToken(token, secret);
+      if (payload) {
+        const res = NextResponse.next();
+        applyCorsHeaders(res);
+        return res;
+      }
+    }
+  }
 
+  // Cookie 认证（兼容 Web）
+  const authInfo = getAuthInfoFromCookie(request);
   if (!authInfo) {
     return handleAuthFailure(request, pathname);
   }
@@ -32,30 +62,27 @@ export async function middleware(request: NextRequest) {
     if (!authInfo.password || authInfo.password !== process.env.PASSWORD) {
       return handleAuthFailure(request, pathname);
     }
-    return NextResponse.next();
+    const res = NextResponse.next();
+    if (isApi) applyCorsHeaders(res);
+    return res;
   }
 
   // 其他模式：只验证签名
-  // 检查是否有用户名（非localStorage模式下密码不存储在cookie中）
   if (!authInfo.username || !authInfo.signature) {
     return handleAuthFailure(request, pathname);
   }
 
-  // 验证签名（如果存在）
-  if (authInfo.signature) {
-    const isValidSignature = await verifySignature(
-      authInfo.username,
-      authInfo.signature,
-      process.env.PASSWORD || ''
-    );
-
-    // 签名验证通过即可
-    if (isValidSignature) {
-      return NextResponse.next();
-    }
+  const isValidSignature = await verifySignature(
+    authInfo.username,
+    authInfo.signature,
+    process.env.PASSWORD || ''
+  );
+  if (isValidSignature) {
+    const res = NextResponse.next();
+    if (isApi) applyCorsHeaders(res);
+    return res;
   }
 
-  // 签名验证失败或不存在签名
   return handleAuthFailure(request, pathname);
 }
 
@@ -104,7 +131,9 @@ function handleAuthFailure(
 ): NextResponse {
   // 如果是 API 路由，返回 401 状态码
   if (pathname.startsWith('/api')) {
-    return new NextResponse('Unauthorized', { status: 401 });
+    const res = new NextResponse('Unauthorized', { status: 401 });
+    applyCorsHeaders(res);
+    return res;
   }
 
   // 否则重定向到登录页面
@@ -136,3 +165,11 @@ export const config = {
     '/((?!_next/static|_next/image|favicon.ico|login|warning|api/login|api/register|api/logout|api/cron|api/server-config).*)',
   ],
 };
+
+function applyCorsHeaders(res: NextResponse) {
+  const allowOrigin = process.env.CORS_ALLOW_ORIGIN || '*';
+  res.headers.set('Access-Control-Allow-Origin', allowOrigin);
+  res.headers.set('Vary', 'Origin');
+  res.headers.set('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.headers.set('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+}
