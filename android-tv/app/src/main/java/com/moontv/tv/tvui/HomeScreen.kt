@@ -287,26 +287,34 @@ private fun splitKey(key: String): Pair<String, String>? {
 }
 
 private val toContinue: (String, PlayRecord) -> ContinueItem? = { key, r ->
-    val parts = splitKey(key) ?: return@toContinue null
-    ContinueItem(
-        id = parts.second,
-        source = parts.first,
-        title = r.title,
-        image = r.cover,
-        year = r.year,
-        episodeIndex = (r.index - 1).coerceAtLeast(0),
-        playSeconds = r.play_time,
-        totalSeconds = r.total_time,
-    )
+    val parts = splitKey(key)
+    if (parts == null) {
+        null
+    } else {
+        ContinueItem(
+            id = parts.second,
+            source = parts.first,
+            title = r.title,
+            image = r.cover,
+            year = r.year,
+            episodeIndex = (r.index - 1).coerceAtLeast(0),
+            playSeconds = r.play_time,
+            totalSeconds = r.total_time,
+        )
+    }
 }
 
 private val toPosterFromFavorite: (String, Favorite) -> PosterItem? = { key, f ->
-    val parts = splitKey(key) ?: return@toPosterFromFavorite null
-    PosterItem(
-        id = parts.second,
-        source = parts.first,
-        title = f.title,
-        image = f.cover,
-        year = f.year,
-    )
+    val parts = splitKey(key)
+    if (parts == null) {
+        null
+    } else {
+        PosterItem(
+            id = parts.second,
+            source = parts.first,
+            title = f.title,
+            image = f.cover,
+            year = f.year,
+        )
+    }
 }
