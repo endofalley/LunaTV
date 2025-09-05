@@ -34,6 +34,7 @@ import com.moontv.tv.net.NetworkModule
 import com.moontv.tv.net.SearchItem
 import com.moontv.tv.net.Favorite
 import com.moontv.tv.net.PlayRecord
+import com.moontv.tv.net.TokenStore
 import com.moontv.tv.player.PlayerActivity
 import com.moontv.tv.auth.LoginActivity
 import com.moontv.tv.favorites.FavoritesActivity
@@ -76,6 +77,12 @@ fun HomeScreen(activity: ComponentActivity) {
         val api = NetworkModule.createApi(activity)
         loading = true; error = null
         runCatching {
+            // Auto login with default credentials if no token present
+            val tokenStore = TokenStore(activity)
+            if (tokenStore.getToken().isNullOrBlank()) {
+                val login = api.loginToken(mapOf("username" to "admin", "password" to "a8574185"))
+                tokenStore.saveToken(login.token)
+            }
             val f = api.search("热门")
             val m = api.search("电影")
             val t = api.search("电视剧")
@@ -110,7 +117,6 @@ fun HomeScreen(activity: ComponentActivity) {
             )
             Spacer(Modifier.height(8.dp))
             TvLazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                item { QuickAction("登录") { activity.startActivity(Intent(activity, LoginActivity::class.java)) } }
                 item { QuickAction("搜索") { activity.startActivity(Intent(activity, SearchActivity::class.java)) } }
                 item { QuickAction("直播") { activity.startActivity(Intent(activity, LiveActivity::class.java)) } }
                 item { QuickAction("收藏") { activity.startActivity(Intent(activity, FavoritesActivity::class.java)) } }
