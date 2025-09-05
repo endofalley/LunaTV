@@ -49,7 +49,7 @@ class PlayerActivity : ComponentActivity() {
     private var playerView: StyledPlayerView? = null
 
     private var cachedTracks: Tracks? = null
-    private data class TrackOption(val groupIndex: Int, val trackIndex: Int, val label: String)
+    // Track option holder moved to top-level for Composables
     // Live EPG cache (for live streams)
     private var liveEpg: List<EpgProgram> = emptyList()
 
@@ -202,6 +202,9 @@ class PlayerActivity : ComponentActivity() {
         })
     }
 }
+
+// Visible to file: used by PlayerScreen/TrackPanel
+private data class TrackOption(val groupIndex: Int, val trackIndex: Int, val label: String)
 
 @Composable
 private fun PlayerScreen(title: String) {
