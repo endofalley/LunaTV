@@ -204,7 +204,6 @@ class PlayerActivity : ComponentActivity() {
 }
 
 @Composable
-@Composable
 private fun PlayerScreen(title: String) {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
