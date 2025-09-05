@@ -423,13 +423,13 @@ class PlayerActivity : ComponentActivity() {
                 .padding(12.dp)
         ) {
             Column {
-                Text(text = "分辨率: ${'$'}{width}x${'$'}{height}", color = Color.White)
-                Text(text = "倍速: ${'$'}{"%.2f".format(rate)}x", color = Color.White)
-                Text(text = "进度: ${'$'}{formatTime(pos)} / ${'$'}{formatTime(dur)}", color = Color.White)
-                Text(text = "集数: 第 ${'$'}{epi} 集", color = Color.White)
+                Text(text = "分辨率: ${width}x${height}", color = Color.White)
+                Text(text = "倍速: ${"%.2f".format(rate)}x", color = Color.White)
+                Text(text = "进度: ${formatTime(pos)} / ${formatTime(dur)}", color = Color.White)
+                Text(text = "集数: 第 ${epi} 集", color = Color.White)
                 if (liveEpg.isNotEmpty()) {
-                    if (nowTitle.isNotBlank()) Text(text = "正在播放: ${'$'}{nowTitle}", color = Color.White)
-                    if (nextTitle.isNotBlank()) Text(text = "下一节目: ${'$'}{nextTitle}", color = Color.White)
+                    if (nowTitle.isNotBlank()) Text(text = "正在播放: $nowTitle", color = Color.White)
+                    if (nextTitle.isNotBlank()) Text(text = "下一节目: $nextTitle", color = Color.White)
                 }
             }
         }
