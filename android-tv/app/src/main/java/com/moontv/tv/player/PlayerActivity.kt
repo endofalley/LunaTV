@@ -383,7 +383,7 @@ class PlayerActivity : ComponentActivity() {
     }
 
     @Composable
-    private fun InfoOverlay() {
+    private fun androidx.compose.foundation.layout.BoxScope.InfoOverlay() {
         val p = player
         var pos by remember { mutableStateOf(0L) }
         var dur by remember { mutableStateOf(0L) }
@@ -555,4 +555,3 @@ class PlayerActivity : ComponentActivity() {
         }
     }
 }
-
