@@ -77,7 +77,7 @@ class PlayerActivity : ComponentActivity() {
                     withContext(Dispatchers.IO) {
                         runCatching { NetworkModule.createApi(this@PlayerActivity).getLiveEpg(liveSource, liveTvgId) }
                             .onSuccess { epgResp -> liveEpg = epgResp.data.programs }
-                    }
+}
                 }
             } else {
                 runCatching { playFlow(source, id, title, year, cover, forcedEpisodeIndex) }
@@ -201,13 +201,12 @@ class PlayerActivity : ComponentActivity() {
             }
         })
     }
-}
 
-// Visible to file: used by PlayerScreen/TrackPanel
-private data class TrackOption(val groupIndex: Int, val trackIndex: Int, val label: String)
+    // Visible to PlayerScreen/TrackPanel
+    private data class TrackOption(val groupIndex: Int, val trackIndex: Int, val label: String)
 
-@Composable
-private fun PlayerScreen(title: String) {
+    @Composable
+    private fun PlayerScreen(title: String) {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             var controlsVisible by remember { mutableStateOf(true) }
@@ -355,17 +354,17 @@ private fun PlayerScreen(title: String) {
             }
         }
     }
-}
+    }
 
-private fun skipIntro() {
+    private fun skipIntro() {
     val p = player ?: return
     val cfg = currentSkip ?: return
     if (cfg.enable && cfg.intro_time > 0) {
         p.seekTo(cfg.intro_time * 1000L)
     }
-}
+    }
 
-private fun skipOutro() {
+    private fun skipOutro() {
     val p = player ?: return
     val cfg = currentSkip ?: return
     val dur = p.duration.takeIf { it > 0 } ?: return
@@ -373,9 +372,9 @@ private fun skipOutro() {
         val target = (dur - cfg.outro_time * 1000L).coerceAtLeast(0)
         p.seekTo(target)
     }
-}
+    }
 
-private fun playNextEpisode() {
+    private fun playNextEpisode() {
     val eps = currentDetail?.episodes ?: return
     val next = currentEpisodeIndex + 1
     if (next < eps.size) {
@@ -385,24 +384,24 @@ private fun playNextEpisode() {
         // 重新挂载监听器
         // 注意：此处无法直接获得 source/id/title 等，可根据需要缓存
     }
-}
+    }
 
-private fun retryPlayback() {
+    private fun retryPlayback() {
     val p = player ?: return
     p.prepare()
     p.playWhenReady = true
     autoRetryCount = 0
-}
+    }
 
-private fun cycleSpeed() {
+    private fun cycleSpeed() {
     val p = player ?: return
     currentSpeedIdx = (currentSpeedIdx + 1) % speeds.size
     val rate = speeds[currentSpeedIdx]
     p.playbackParameters = PlaybackParameters(rate)
-}
+    }
 
-@Composable
-private fun InfoOverlay() {
+    @Composable
+    private fun InfoOverlay() {
     val p = player
     var pos by remember { mutableStateOf(0L) }
     var dur by remember { mutableStateOf(0L) }
@@ -453,18 +452,18 @@ private fun InfoOverlay() {
             }
         }
     }
-}
+    }
 
-private fun formatTime(ms: Long): String {
+    private fun formatTime(ms: Long): String {
     if (ms <= 0) return "00:00"
     val total = (ms / 1000).toInt()
     val h = total / 3600
     val m = (total % 3600) / 60
     val s = total % 60
     return if (h > 0) String.format("%d:%02d:%02d", h, m, s) else String.format("%02d:%02d", m, s)
-}
+    }
 
-private fun parseEpgTime(s: String): Long {
+    private fun parseEpgTime(s: String): Long {
     // 期望格式形如: 20250121 120000 +0800 或 20250121120000 +0800
     return try {
         val digits = s.filter { it.isDigit() }
@@ -486,9 +485,9 @@ private fun parseEpgTime(s: String): Long {
     } catch (_: Throwable) {
         0L
     }
-}
+    }
 
-private fun selectTrack(trackType: Int, groupIndex: Int, trackIndex: Int) {
+    private fun selectTrack(trackType: Int, groupIndex: Int, trackIndex: Int) {
     val p = player ?: return
     val tracks = p.currentTracks ?: return
     val group = tracks.groups.getOrNull(groupIndex)?.mediaTrackGroup ?: return
@@ -500,10 +499,10 @@ private fun selectTrack(trackType: Int, groupIndex: Int, trackIndex: Int) {
     }
     builder.addOverride(override)
     p.trackSelectionParameters = builder.build()
-}
+    }
 
-@Composable
-private fun FocusButton(text: String, onClick: () -> Unit) {
+    @Composable
+    private fun FocusButton(text: String, onClick: () -> Unit) {
     var focused by remember { mutableStateOf(false) }
     Text(
         text = text,
@@ -522,15 +521,15 @@ private fun FocusButton(text: String, onClick: () -> Unit) {
             .clickable { onClick() }
             .padding(8.dp)
     )
-}
+    }
 
-@Composable
-private fun TrackPanel(
-    title: String,
-    options: List<String>,
-    onSelect: (Int) -> Unit,
-    onDismiss: () -> Unit
-) {
+    @Composable
+    private fun TrackPanel(
+        title: String,
+        options: List<String>,
+        onSelect: (Int) -> Unit,
+        onDismiss: () -> Unit
+    ) {
     var focusedIndex by remember { mutableStateOf(0) }
     Box(
         modifier = Modifier
@@ -571,4 +570,4 @@ private fun TrackPanel(
             }
         }
     }
-}
+    }
