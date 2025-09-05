@@ -50,6 +50,8 @@ class PlayerActivity : ComponentActivity() {
 
     private var cachedTracks: Tracks? = null
     private data class TrackOption(val groupIndex: Int, val trackIndex: Int, val label: String)
+    // Live EPG cache (for live streams)
+    private var liveEpg: List<EpgProgram> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
