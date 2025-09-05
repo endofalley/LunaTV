@@ -32,6 +32,9 @@ import androidx.tv.foundation.lazy.list.items
 import com.moontv.tv.detail.DetailActivity
 import com.moontv.tv.net.NetworkModule
 import com.moontv.tv.net.SearchItem
+import com.moontv.tv.net.Favorite
+import com.moontv.tv.net.PlayRecord
+import com.moontv.tv.player.PlayerActivity
 import com.moontv.tv.auth.LoginActivity
 import com.moontv.tv.favorites.FavoritesActivity
 import com.moontv.tv.live.LiveActivity
@@ -45,6 +48,17 @@ data class PosterItem(
     val year: String? = null,
 )
 
+data class ContinueItem(
+    val id: String,
+    val source: String,
+    val title: String,
+    val image: String?,
+    val year: String? = null,
+    val episodeIndex: Int = 0, // 0-based
+    val playSeconds: Int = 0,
+    val totalSeconds: Int = 0,
+)
+
 @OptIn(ExperimentalTvFoundationApi::class)
 @Composable
 fun HomeScreen(activity: ComponentActivity) {
@@ -52,6 +66,8 @@ fun HomeScreen(activity: ComponentActivity) {
     var featured by remember { mutableStateOf<List<PosterItem>>(emptyList()) }
     var movies by remember { mutableStateOf<List<PosterItem>>(emptyList()) }
     var tvs by remember { mutableStateOf<List<PosterItem>>(emptyList()) }
+    var continueItems by remember { mutableStateOf<List<ContinueItem>>(emptyList()) }
+    var favorites by remember { mutableStateOf<List<PosterItem>>(emptyList()) }
     var loading by remember { mutableStateOf(true) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -63,9 +79,13 @@ fun HomeScreen(activity: ComponentActivity) {
             val f = api.search("热门")
             val m = api.search("电影")
             val t = api.search("电视剧")
+            val recs = api.getAllPlayRecords()
+            val favs = api.getAllFavorites()
             featured = f.results.map(toPoster)
             movies = m.results.map(toPoster)
             tvs = t.results.map(toPoster)
+            continueItems = recs.entries.mapNotNull { (k, v) -> toContinue(k, v) }
+            favorites = favs.entries.mapNotNull { (k, v) -> toPosterFromFavorite(k, v) }
         }.onFailure { e -> error = e.message }.also { loading = false }
     }
 
@@ -99,6 +119,37 @@ fun HomeScreen(activity: ComponentActivity) {
 
         if (error != null) {
             item { Text(text = "加载出错: ${error}", color = Color.Red) }
+        }
+
+        item { SectionHeader("继续观看") }
+        item {
+            if (loading && continueItems.isEmpty()) {
+                Text(text = "加载中…", color = Color(0xFFBBBBBB))
+            } else {
+                TvLazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(continueItems) { it ->
+                        val percent = if (it.totalSeconds > 0) (it.playSeconds * 100 / it.totalSeconds).coerceIn(0, 100) else 0
+                        TvPosterCard(
+                            imageUrl = it.image,
+                            contentDescription = it.title,
+                            title = it.title,
+                            topLeftBadge = "第 ${it.episodeIndex + 1} 集",
+                            topRightBadge = if (percent > 0) "$percent%" else null,
+                            onClick = {
+                                val i = Intent(activity, PlayerActivity::class.java).apply {
+                                    putExtra("source", it.source)
+                                    putExtra("id", it.id)
+                                    putExtra("title", it.title)
+                                    putExtra("year", it.year ?: "")
+                                    putExtra("cover", it.image ?: "")
+                                    putExtra("episodeIndex", it.episodeIndex)
+                                }
+                                activity.startActivity(i)
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         item { SectionHeader("热门推荐") }
@@ -169,6 +220,32 @@ fun HomeScreen(activity: ComponentActivity) {
                 }
             }
         }
+        item { SectionHeader("我的收藏") }
+        item {
+            if (loading && favorites.isEmpty()) {
+                Text(text = "加载中…", color = Color(0xFFBBBBBB))
+            } else {
+                TvLazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    items(favorites) { it ->
+                        TvPosterCard(
+                            imageUrl = it.image,
+                            contentDescription = it.title,
+                            title = it.title,
+                            onClick = {
+                                val i = Intent(activity, DetailActivity::class.java).apply {
+                                    putExtra("id", it.id)
+                                    putExtra("source", it.source)
+                                    putExtra("title", it.title)
+                                    putExtra("year", it.year ?: "")
+                                    putExtra("poster", it.image ?: "")
+                                }
+                                activity.startActivity(i)
+                            }
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -198,5 +275,38 @@ private val toPoster: (SearchItem) -> PosterItem = { s ->
         title = s.title,
         image = s.poster,
         year = s.year,
+    )
+}
+
+private fun splitKey(key: String): Pair<String, String>? {
+    val idx = key.indexOf('+')
+    if (idx <= 0 || idx >= key.length - 1) return null
+    val source = key.substring(0, idx)
+    val id = key.substring(idx + 1)
+    return source to id
+}
+
+private val toContinue: (String, PlayRecord) -> ContinueItem? = { key, r ->
+    val parts = splitKey(key) ?: return@toContinue null
+    ContinueItem(
+        id = parts.second,
+        source = parts.first,
+        title = r.title,
+        image = r.cover,
+        year = r.year,
+        episodeIndex = (r.index - 1).coerceAtLeast(0),
+        playSeconds = r.play_time,
+        totalSeconds = r.total_time,
+    )
+}
+
+private val toPosterFromFavorite: (String, Favorite) -> PosterItem? = { key, f ->
+    val parts = splitKey(key) ?: return@toPosterFromFavorite null
+    PosterItem(
+        id = parts.second,
+        source = parts.first,
+        title = f.title,
+        image = f.cover,
+        year = f.year,
     )
 }
