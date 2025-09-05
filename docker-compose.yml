@@ -1,0 +1,67 @@
+# LunaTV deployment with Kvrocks (recommended)
+# Usage:
+#   1) Optional: create a .env in the same folder to set USERNAME/PASSWORD/SITE_BASE/NEXT_PUBLIC_SITE_NAME, etc.
+#   2) Run: docker compose up -d
+#   3) Visit: http://<host>:3000/login and sign in with the credentials below.
+
+services:
+  moontv-core:
+    image: ghcr.io/moontechlab/lunatv:latest
+    container_name: moontv-core
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      # REQUIRED admin credentials
+      - USERNAME=${USERNAME:-admin}
+      - PASSWORD=${PASSWORD:-change_me}
+
+      # Storage backend (choose one): kvrocks | redis | upstash
+      - NEXT_PUBLIC_STORAGE_TYPE=kvrocks
+
+      # Kvrocks connection URL (match the service name below)
+      - KVROCKS_URL=redis://moontv-kvrocks:6666
+
+      # Optional site configs
+      - SITE_BASE=${SITE_BASE:-}
+      - NEXT_PUBLIC_SITE_NAME=${NEXT_PUBLIC_SITE_NAME:-MoonTV}
+      - ANNOUNCEMENT=${ANNOUNCEMENT:-本网站仅提供影视信息搜索服务，所有内容均来自第三方网站。}
+      - NEXT_PUBLIC_SEARCH_MAX_PAGE=${NEXT_PUBLIC_SEARCH_MAX_PAGE:-5}
+      - NEXT_PUBLIC_FLUID_SEARCH=${NEXT_PUBLIC_FLUID_SEARCH:-true}
+
+    depends_on:
+      - moontv-kvrocks
+    networks:
+      - moontv-network
+
+  # Persistent Kvrocks (recommended for durability)
+  moontv-kvrocks:
+    image: apache/kvrocks
+    container_name: moontv-kvrocks
+    restart: unless-stopped
+    volumes:
+      - kvrocks-data:/var/lib/kvrocks
+    networks:
+      - moontv-network
+
+  # --- Alternative: Redis (uncomment to use, and switch storage type) ---
+  # moontv-redis:
+  #   image: redis:alpine
+  #   container_name: moontv-redis
+  #   restart: unless-stopped
+  #   volumes:
+  #     - ./data:/data  # enable persistence to avoid data loss
+  #   networks:
+  #     - moontv-network
+  #
+  # When using Redis instead of Kvrocks:
+  #   - set NEXT_PUBLIC_STORAGE_TYPE=redis
+  #   - set REDIS_URL=redis://moontv-redis:6379
+
+networks:
+  moontv-network:
+    driver: bridge
+
+volumes:
+  kvrocks-data:
+
