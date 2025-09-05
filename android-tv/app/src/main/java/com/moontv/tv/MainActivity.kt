@@ -10,10 +10,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import android.content.Intent
 import androidx.compose.material3.Button
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.unit.dp
 import com.moontv.tv.player.PlayerActivity
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
@@ -31,13 +37,13 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            TvRoot()
+            TvRoot(this)
         }
     }
 }
 
 @Composable
-fun TvRoot() {
+fun TvRoot(activity: ComponentActivity) {
     MaterialTheme {
         Surface(modifier = Modifier.fillMaxSize()) {
             Column(
@@ -47,30 +53,34 @@ fun TvRoot() {
             ) {
                 Text(text = "LunaTV Android TV")
                 Text(text = "占位：首页 / 搜索 / 详情")
-                val tokenStore = remember { TokenStore(this@MainActivity) }
+                val tokenStore = remember { TokenStore(activity) }
                 val hasToken = remember { mutableStateOf(tokenStore.getToken() != null) }
                 Row {
-                    Button(onClick = { startActivity(Intent(this@MainActivity, LoginActivity::class.java)) }) {
+                    Button(onClick = { activity.startActivity(Intent(activity, LoginActivity::class.java)) }) {
                         Text(text = if (hasToken.value) "重新登录" else "登录")
                     }
                     Spacer(Modifier.width(8.dp))
-                    Button(onClick = { tokenStore.clearToken(); hasToken.value = false; Toast.makeText(this@MainActivity, "已登出", Toast.LENGTH_SHORT).show() }) {
+                    Button(onClick = {
+                        tokenStore.clearToken()
+                        hasToken.value = false
+                        Toast.makeText(activity, "已登出", Toast.LENGTH_SHORT).show()
+                    }) {
                         Text(text = "登出")
                     }
                 }
-                Button(onClick = { demoPlay() }) {
+                Button(onClick = { activity.demoPlay() }) {
                     Text(text = "演示播放（需要配置 BASE_URL 与登录）")
                 }
-                Button(onClick = { demoLive() }) {
+                Button(onClick = { activity.demoLive() }) {
                     Text(text = "演示直播（自动播放第一个频道）")
                 }
-                Button(onClick = { demoFavorite() }) {
+                Button(onClick = { activity.demoFavorite() }) {
                     Text(text = "演示收藏（写入一条示例）")
                 }
-                Button(onClick = { demoSearch() }) {
+                Button(onClick = { activity.demoSearch() }) {
                     Text(text = "演示搜索 → 详情 → 播放")
                 }
-                Button(onClick = { startActivity(Intent(this@MainActivity, FavoritesActivity::class.java)) }) {
+                Button(onClick = { activity.startActivity(Intent(activity, FavoritesActivity::class.java)) }) {
                     Text(text = "打开我的收藏")
                 }
             }
